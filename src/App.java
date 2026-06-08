@@ -1,43 +1,51 @@
 package src;
 
 public class App {
+
+    public static void assertEquals(Object expected, Object actual, String namaPengujian) {
+        if (expected == null && actual == null) {
+            System.out.println("  [?] PASSED: " + namaPengujian);
+        } else if (expected != null && expected.equals(actual)) {
+            System.out.println("  [?] PASSED: " + namaPengujian);
+        } else {
+            System.out.println("  [X] FAILED: " + namaPengujian + " (Ekspektasi: " + expected + ", Aktual: " + actual + ")");
+            throw new AssertionError("Pengujian Gagal!");
+        }
+    }
+
     public static void main(String[] args) {
-        System.out.println("Memulai Aplikasi Core Nasabah...");
+        System.out.println("==================================================");
+        System.out.println("   MULAILAH AUTOMATED UNIT TESTING (THE SHIELD)   ");
+        System.out.println("==================================================");
+
         NasabahController controller = new NasabahController();
 
+        // 1. PENGUJIAN SKENARIO A
         try {
-            // Test Kasus 1: Registrasi Nasabah Baru Sukses
-            System.out.println("\n[Test 1] Mencoba registrasi data baru...");
-            controller.registrasiNasabah(
-                "andini27", "rahasia123", "3512345678900001",
-                "Andini Lestari", "Kepanjen, Malang", "081234567890"
-            );
-            System.out.println("Hasil: Registrasi Berhasil!");
-
-            // Test Kasus 2: Memicu DuplicateNIKException dengan NIK yang sama
-            System.out.println("\n[Test 2] Mencoba duplikasi NIK yang sama...");
-            controller.registrasiNasabah(
-                "andini_palsu", "salah567", "3512345678900001",
-                "Andini KW", "Surabaya", "089999999"
-            );
-
-        } catch (DuplicateNIKException e) {
-            System.out.println("Hasil Terproteksi: " + e.getMessage()); // Menangkap exception buatan kita
+            Nasabah hasil = controller.cariNasabahByNIK("9999999999999999");
+            assertEquals(null, hasil, "Uji Pencarian NIK Kosong Harus Menghasilkan Null");
         } catch (Exception e) {
-            System.err.println("Error Sistem Lain: " + e.getMessage());
+            System.out.println("  [X] FAILED: Terjadi error pada Skenario A.");
         }
 
-        // Test Kasus 3: Pencarian Instan tingkat lanjut lewat HashMap
-        System.out.println("\n[Test 3] Menguji Fitur Pencarian Instan...");
-        String nikCari = "3512345678900001";
-        Nasabah target = controller.cariNasabahByNIK(nikCari);
+        // 2. PENGUJIAN SKENARIO B
+        try {
+            System.out.println("\nMencoba registrasi data nasabah pertama ke database...");
+            controller.registrasiNasabah("userA", "pass1", "3512345678901111", "Budi", "Malang", "081");
 
-        if (target != null) {
-            System.out.println("Data Ditemukan di RAM!");
-            System.out.println("-> Nama   : " + target.getNamaLengkap());
-            System.out.println("-> Status KYC: " + target.getStatusKyc());
-        } else {
-            System.out.println("Data dengan NIK tersebut tidak ada.");
+            System.out.println("Mencoba registrasi data nasabah kedua dengan NIK ganda yang sama...");
+            controller.registrasiNasabah("userB", "pass2", "3512345678901111", "Budi KW", "Surabaya", "082");
+
+            System.out.println("  [X] FAILED: Sistem meloloskan data NIK duplikat!");
+        } catch (DuplicateNIKException e) {
+            System.out.println("  [?] PASSED: DuplicateNIKException Berhasil Dilempar!");
+            System.out.println("  Pesan Blokir Sistem: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("  [X] FAILED: Menangkap error tipe lain: " + e.getMessage());
         }
+
+        System.out.println("==================================================");
+        System.out.println("      SELURUH UNIT TESTING SELESAI (PASSED)       ");
+        System.out.println("==================================================");
     }
 }

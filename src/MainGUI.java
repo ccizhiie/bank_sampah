@@ -4,287 +4,235 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.MaskFormatter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.ParseException;
 import java.util.List;
 
 public class MainGUI extends JFrame {
     private NasabahController controller;
-
-    private JTextField txtUsername, txtNama, txtNoHp;
+    private JTextField txtUsername, txtNama, txtNoHp, txtCariNik;
     private JPasswordField txtPassword;
     private JTextArea txtAlamat;
     private JFormattedTextField txtNik;
-    private JButton btnDaftar;
+    private JButton btnDaftar, btnCari, btnResetCari, btnApprove, btnReject, btnRefresh, btnExportCsv;
 
-    private JTextField txtCariNik;
-    private JButton btnCari;
-    private JTextArea txtHasilPencarian;
-
+    // Tabel Operasional Admin
     private JTable tableKyc;
-    private DefaultTableModel tableModel;
-    private JButton btnApprove, btnReject, btnRefresh;
+    private DefaultTableModel tableModelKyc;
+
+    // Tabel Komponen Pencarian (Tab 2)
+    private JTable tableSearch;
+    private DefaultTableModel tableModelSearch;
 
     public MainGUI() {
         controller = new NasabahController();
         initComponent();
-        refreshTableKyc();
+        refreshAllTables();
     }
 
     private void initComponent() {
         setTitle("Sistem Bank Sampah - Tim 3 Core Nasabah (Async Mode)");
-        setSize(700, 550);
+        setSize(800, 550);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        // TAB 1: REGISTRASI & KYC DIGITAL
+        // --------------------------------------------------------
+        // TAB 1: FORM REGISTRASI
+        // --------------------------------------------------------
         JPanel panelRegistrasi = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 5, 5, 5); gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        txtUsername = new JTextField(15);
-        txtPassword = new JPasswordField(15);
-        txtNama = new JTextField(15);
-        txtNoHp = new JTextField(15);
-        txtAlamat = new JTextArea(3, 15);
-        txtAlamat.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        txtUsername = new JTextField(15); txtPassword = new JPasswordField(15);
+        txtNama = new JTextField(15); txtNoHp = new JTextField(15);
+        txtAlamat = new JTextArea(3, 15); txtAlamat.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
 
         try {
             MaskFormatter maskNik = new MaskFormatter("################");
             maskNik.setPlaceholderCharacter('_');
             txtNik = new JFormattedTextField(maskNik);
-        } catch (ParseException e) {
-            txtNik = new JFormattedTextField();
-        }
+        } catch (ParseException e) { txtNik = new JFormattedTextField(); }
 
         addFormRow(panelRegistrasi, "Username:", txtUsername, gbc, 0);
         addFormRow(panelRegistrasi, "Password:", txtPassword, gbc, 1);
         addFormRow(panelRegistrasi, "NIK (16 Digit):", txtNik, gbc, 2);
         addFormRow(panelRegistrasi, "Nama Lengkap:", txtNama, gbc, 3);
         addFormRow(panelRegistrasi, "No HP:", txtNoHp, gbc, 4);
-
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1;
-        panelRegistrasi.add(new JLabel("Alamat:"), gbc);
-        gbc.gridx = 1;
-        panelRegistrasi.add(new JScrollPane(txtAlamat), gbc);
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1; panelRegistrasi.add(new JLabel("Alamat:"), gbc);
+        gbc.gridx = 1; panelRegistrasi.add(new JScrollPane(txtAlamat), gbc);
 
         btnDaftar = new JButton("Daftar & Ajukan KYC");
-        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
-        panelRegistrasi.add(btnDaftar, gbc);
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2; panelRegistrasi.add(btnDaftar, gbc);
 
-        // TAB 2: PENCARIAN TINGKAT LANJUT
+        // --------------------------------------------------------
+        // TAB 2: PENCARIAN GLOBAL & SINKRONISASI LIST
+        // --------------------------------------------------------
         JPanel panelPencarian = new JPanel(new BorderLayout(10, 10));
         panelPencarian.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JPanel panelCariInput = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        txtCariNik = new JTextField(14);
+        btnCari = new JButton("Cari NIK");
+        btnResetCari = new JButton("Tampilkan Semua");
+
         panelCariInput.add(new JLabel("Masukkan NIK Nasabah:"));
-        txtCariNik = new JTextField(16);
-        btnCari = new JButton("Cari Instan (RAM)");
         panelCariInput.add(txtCariNik);
         panelCariInput.add(btnCari);
+        panelCariInput.add(btnResetCari);
 
-        txtHasilPencarian = new JTextArea();
-        txtHasilPencarian.setEditable(false);
-        txtHasilPencarian.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        txtHasilPencarian.setBorder(BorderFactory.createTitledBorder("Hasil Pencarian di Memori"));
+        String[] kolomSearch = {"ID", "NIK", "Nama Lengkap", "No HP", "Status KYC"};
+        tableModelSearch = new DefaultTableModel(kolomSearch, 0) { @Override public boolean isCellEditable(int r, int c) { return false; } };
+        tableSearch = new JTable(tableModelSearch);
 
         panelPencarian.add(panelCariInput, BorderLayout.NORTH);
-        panelPencarian.add(new JScrollPane(txtHasilPencarian), BorderLayout.CENTER);
+        panelPencarian.add(new JScrollPane(tableSearch), BorderLayout.CENTER);
 
-        // TAB 3: VERIFIKASI DATA & STATUS KYC
+        // --------------------------------------------------------
+        // TAB 3: VERIFIKASI ADMIN (PENDING FILTER)
+        // --------------------------------------------------------
         JPanel panelVerifikasi = new JPanel(new BorderLayout(10, 10));
         panelVerifikasi.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        String[] kolom = {"ID", "NIK", "Nama Lengkap", "Status KYC"};
-        tableModel = new DefaultTableModel(kolom, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        tableKyc = new JTable(tableModel);
-        JScrollPane scrollTable = new JScrollPane(tableKyc);
+        String[] kolomKyc = {"ID", "NIK", "Nama", "Status"};
+        tableModelKyc = new DefaultTableModel(kolomKyc, 0) { @Override public boolean isCellEditable(int r, int c) { return false; } };
+        tableKyc = new JTable(tableModelKyc);
 
         JPanel panelTombolAdmin = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnApprove = new JButton("Setujui (APPROVE)");
-        btnApprove.setBackground(new Color(46, 204, 113));
-        btnApprove.setForeground(Color.WHITE);
-
-        btnReject = new JButton("Tolak (REJECT)");
-        btnReject.setBackground(new Color(231, 76, 60));
-        btnReject.setForeground(Color.WHITE);
-
+        btnApprove = new JButton("APPROVE"); btnApprove.setBackground(new Color(46, 204, 113)); btnApprove.setForeground(Color.WHITE);
+        btnReject = new JButton("REJECT"); btnReject.setBackground(new Color(231, 76, 60)); btnReject.setForeground(Color.WHITE);
         btnRefresh = new JButton("Refresh Data");
+        btnExportCsv = new JButton("Export CSV"); btnExportCsv.setBackground(new Color(52, 152, 219)); btnExportCsv.setForeground(Color.WHITE);
 
         panelTombolAdmin.add(btnRefresh);
+        panelTombolAdmin.add(btnExportCsv);
         panelTombolAdmin.add(btnReject);
         panelTombolAdmin.add(btnApprove);
-
-        panelVerifikasi.add(new JLabel("Daftar Pengajuan KYC Nasabah (Status: PENDING):"), BorderLayout.NORTH);
-        panelVerifikasi.add(scrollTable, BorderLayout.CENTER);
-        panelVerifikasi.add(panelTombolAdmin, BorderLayout.SOUTH);
+        panelVerifikasi.add(new JScrollPane(tableKyc), BorderLayout.CENTER); panelVerifikasi.add(panelTombolAdmin, BorderLayout.SOUTH);
 
         tabbedPane.addTab("Registrasi Nasabah Baru", panelRegistrasi);
-        tabbedPane.addTab("Pencarian Tingkat Lanjut", panelPencarian);
+        tabbedPane.addTab("Pencarian & Daftar Nasabah", panelPencarian);
         tabbedPane.addTab("Verifikasi & Status KYC (Admin)", panelVerifikasi);
-
         add(tabbedPane);
 
-        // ========================================================
-        // IMPLEMENTASI MATERI BARU: SwingWorker (Async Process)
-        // ========================================================
+        // --------------------------------------------------------
+        // ACTIONS AND EVENT LISTENERS
+        // --------------------------------------------------------
+        btnDaftar.addActionListener(e -> {
+            String username = txtUsername.getText().trim();
+            String password = new String(txtPassword.getPassword()).trim();
+            String nik = txtNik.getText().replace("_", "").trim();
+            String nama = txtNama.getText().trim();
+            String noHp = txtNoHp.getText().trim();
+            String alamat = txtAlamat.getText().trim();
 
-        // 1. Aksi Registrasi Menggunakan SwingWorker
-        btnDaftar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String username = txtUsername.getText().trim();
-                String password = new String(txtPassword.getPassword()).trim();
-                String nik = txtNik.getText().replace("_", "").trim();
-                String nama = txtNama.getText().trim();
-                String noHp = txtNoHp.getText().trim();
-                String alamat = txtAlamat.getText().trim();
+            if (username.isEmpty() || password.isEmpty() || nik.length() < 16 || nama.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Format data pendaftaran salah/belum lengkap!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
-                if (username.isEmpty() || password.isEmpty() || nik.length() < 16 || nama.isEmpty()) {
-                    JOptionPane.showMessageDialog(MainGUI.this, "Mohon lengkapi data dengan benar!", "Peringatan", JOptionPane.WARNING_MESSAGE);
-                    return;
+            btnDaftar.setEnabled(false);
+            new SwingWorker<Void, Void>() {
+                private boolean success = false; private String err = "";
+                @Override protected Void doInBackground() {
+                    try { controller.registrasiNasabah(username, password, nik, nama, alamat, noHp); success = true; }
+                    catch (DuplicateNIKException ex) { err = ex.getMessage(); }
+                    catch (Exception ex) { err = ex.getMessage(); }
+                    return null;
                 }
-
-                btnDaftar.setEnabled(false); // Matikan tombol agar tidak diklik 2x (Sesuai slide materi baru)
-
-                // Jalankan SwingWorker agar pendaftaran ke database tidak membuat GUI freeze
-                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                    private boolean isSuccess = false;
-                    private String errorMessage = "";
-
-                    @Override
-                    protected Void doInBackground() throws Exception {
-                        try {
-                            controller.registrasiNasabah(username, password, nik, nama, alamat, noHp);
-                            isSuccess = true;
-                        } catch (DuplicateNIKException ex) {
-                            errorMessage = ex.getMessage();
-                        } catch (Exception ex) {
-                            errorMessage = "Database Error: " + ex.getMessage();
-                        }
-                        return null;
+                @Override protected void done() {
+                    btnDaftar.setEnabled(true);
+                    if (success) {
+                        JOptionPane.showMessageDialog(MainGUI.this, "Pendaftaran Berhasil Diajukan!");
+                        clearForm();
+                        refreshAllTables();
+                    } else {
+                        JOptionPane.showMessageDialog(MainGUI.this, err, "Gagal Registrasi", JOptionPane.ERROR_MESSAGE);
                     }
-
-                    @Override
-                    protected void done() {
-                        btnDaftar.setEnabled(true); // Hidupkan kembali tombol di EDT Thread Utama
-                        if (isSuccess) {
-                            JOptionPane.showMessageDialog(MainGUI.this, "Registrasi Sukses! Data masuk antrean KYC.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
-                            clearForm();
-                            refreshTableKyc();
-                        } else {
-                            JOptionPane.showMessageDialog(MainGUI.this, errorMessage, "Pendaftaran Gagal", JOptionPane.ERROR_MESSAGE);
-                        }
-                    }
-                };
-                worker.execute(); // Eksekusi pekerjaan di Background Thread
-            }
-        });
-
-        // 2. Cari Instan (Langsung dari RAM via HashMap, prosesnya instan jadi aman tanpa SwingWorker)
-        btnCari.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String nikCari = txtCariNik.getText().trim();
-                if (nikCari.isEmpty()) return;
-
-                Nasabah n = controller.cariNasabahByNIK(nikCari);
-                if (n != null) {
-                    txtHasilPencarian.setText(
-                        "=== DATA NASABAH DI TEMUKAN DI RAM ===\n" +
-                        "NIK          : " + n.getNik() + "\n" +
-                        "Nama Lengkap : " + n.getNamaLengkap() + "\n" +
-                        "Status KYC   : " + n.getStatusKyc() + "\n" +
-                        "======================================"
-                    );
-                } else {
-                    txtHasilPencarian.setText("Nasabah dengan NIK [" + nikCari + "] Tidak Ditemukan.");
                 }
+            }.execute();
+        });
+
+        // Event Pencarian Dinamis
+        btnCari.addActionListener(e -> {
+            String targetNik = txtCariNik.getText().trim();
+            if (targetNik.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Masukkan NIK yang ingin dicari!");
+                return;
+            }
+            Nasabah n = controller.cariNasabahByNIK(targetNik);
+            tableModelSearch.setRowCount(0); // Bersihkan tabel
+            if (n != null) {
+                tableModelSearch.addRow(new Object[]{n.getIdNasabah(), n.getNik(), n.getNamaLengkap(), n.getNoHp(), n.getStatusKyc()});
+            } else {
+                JOptionPane.showMessageDialog(this, "Nasabah dengan NIK tersebut tidak terdaftar di memori RAM.");
             }
         });
 
-        // 3. Aksi Approve dengan SwingWorker
-        btnApprove.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int selectedRow = tableKyc.getSelectedRow();
-                if (selectedRow == -1) return;
-
-                int idNasabah = (int) tableModel.getValueAt(selectedRow, 0);
-                String nik = (String) tableModel.getValueAt(selectedRow, 1);
-
-                btnApprove.setEnabled(false);
-
-                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                    @Override
-                    protected Void doInBackground() throws Exception {
-                        controller.updateStatusKyc(idNasabah, nik, "APPROVED");
-                        return null;
-                    }
-
-                    @Override
-                    protected void done() {
-                        btnApprove.setEnabled(true);
-                        JOptionPane.showMessageDialog(MainGUI.this, "Nasabah APPROVED!");
-                        refreshTableKyc();
-                    }
-                };
-                worker.execute();
-            }
+        btnResetCari.addActionListener(e -> {
+            txtCariNik.setText("");
+            refreshTableSearch();
         });
 
-        // 4. Aksi Reject dengan SwingWorker
-        btnReject.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int selectedRow = tableKyc.getSelectedRow();
-                if (selectedRow == -1) return;
+        btnApprove.addActionListener(e -> eksekusiStatusAdmin("APPROVED"));
+        btnReject.addActionListener(e -> eksekusiStatusAdmin("REJECTED"));
+        btnRefresh.addActionListener(e -> refreshAllTables());
 
-                int idNasabah = (int) tableModel.getValueAt(selectedRow, 0);
-                String nik = (String) tableModel.getValueAt(selectedRow, 1);
-
-                btnReject.setEnabled(false);
-
-                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                    @Override
-                    protected Void doInBackground() throws Exception {
-                        controller.updateStatusKyc(idNasabah, nik, "REJECTED");
-                        return null;
+        btnExportCsv.addActionListener(e -> {
+            btnExportCsv.setEnabled(false);
+            new SwingWorker<Void, Void>() {
+                private boolean success = false;
+                @Override protected Void doInBackground() throws Exception {
+                    controller.exportToCSV("laporan_nasabah.csv");
+                    success = true;
+                    return null;
+                }
+                @Override protected void done() {
+                    btnExportCsv.setEnabled(true);
+                    if (success) {
+                        JOptionPane.showMessageDialog(MainGUI.this, "Sukses mengekspor memori RAM ke file 'laporan_nasabah.csv'!", "Ekspor Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(MainGUI.this, "Gagal memproses file CSV.", "Error File IO", JOptionPane.ERROR_MESSAGE);
                     }
-
-                    @Override
-                    protected void done() {
-                        btnReject.setEnabled(true);
-                        JOptionPane.showMessageDialog(MainGUI.this, "Nasabah REJECTED!");
-                        refreshTableKyc();
-                    }
-                };
-                worker.execute();
-            }
+                }
+            }.execute();
         });
+    }
 
-        btnRefresh.addActionListener(e -> refreshTableKyc());
+    private void eksekusiStatusAdmin(String status) {
+        int row = tableKyc.getSelectedRow();
+        if (row == -1) { JOptionPane.showMessageDialog(this, "Pilih salah satu baris nasabah terlebih dahulu!"); return; }
+        int id = (int) tableModelKyc.getValueAt(row, 0);
+        String nik = (String) tableModelKyc.getValueAt(row, 1);
+
+        new SwingWorker<Void, Void>() {
+            @Override protected Void doInBackground() throws Exception { controller.updateStatusKyc(id, nik, status); return null; }
+            @Override protected void done() {
+                JOptionPane.showMessageDialog(MainGUI.this, "Nasabah NIK ["+nik+"] Berhasil Diubah ke Status: " + status);
+                refreshAllTables();
+            }
+        }.execute();
+    }
+
+    private void refreshAllTables() {
+        refreshTableKyc();
+        refreshTableSearch();
     }
 
     private void refreshTableKyc() {
-        tableModel.setRowCount(0);
-        List<Nasabah> listPending = controller.getAllPendingNasabah();
-        for (Nasabah n : listPending) {
-            tableModel.addRow(new Object[]{n.getIdNasabah(), n.getNik(), n.getNamaLengkap(), n.getStatusKyc()});
-        }
+        tableModelKyc.setRowCount(0);
+        List<Nasabah> list = controller.getAllPendingNasabah();
+        for (Nasabah n : list) tableModelKyc.addRow(new Object[]{n.getIdNasabah(), n.getNik(), n.getNamaLengkap(), n.getStatusKyc()});
     }
 
-    private void addFormRow(JPanel panel, String labelText, Component comp, GridBagConstraints gbc, int y) {
-        gbc.gridwidth = 1; gbc.gridx = 0; gbc.gridy = y;
-        panel.add(new JLabel(labelText), gbc);
-        gbc.gridx = 1; panel.add(comp, gbc);
+    private void refreshTableSearch() {
+        tableModelSearch.setRowCount(0);
+        List<Nasabah> list = controller.getAllNasabah();
+        for (Nasabah n : list) tableModelSearch.addRow(new Object[]{n.getIdNasabah(), n.getNik(), n.getNamaLengkap(), n.getNoHp(), n.getStatusKyc()});
+    }
+
+    private void addFormRow(JPanel p, String l, Component c, GridBagConstraints g, int y) {
+        g.gridwidth = 1; g.gridx = 0; g.gridy = y; p.add(new JLabel(l), g);
+        g.gridx = 1; p.add(c, g);
     }
 
     private void clearForm() {
@@ -292,9 +240,5 @@ public class MainGUI extends JFrame {
         txtNama.setText(""); txtNoHp.setText(""); txtAlamat.setText("");
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new MainGUI().setVisible(true);
-        });
-    }
+    public static void main(String[] args) { SwingUtilities.invokeLater(() -> new MainGUI().setVisible(true)); }
 }
