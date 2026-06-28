@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="bank_sampah">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/bank_sampah-main/bank_sampah.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../tess4j-5.19.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
